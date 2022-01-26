@@ -2,7 +2,7 @@ import express from 'express';
 import { rootHandler, helloHandler } from './handlers/handlers';
 
 const app = express();
-const port = process.env.PORT || '8000';
+const port = process.env.PORT || '3000';
 
 app.get('/', rootHandler);
 app.get('/hello/:name', helloHandler);
