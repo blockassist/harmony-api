@@ -1,21 +1,16 @@
 import { Request, Response } from 'express';
+import captureException from '../lib/captureException'
+import Block from '../lib/harmony/Block';
 
-interface HelloResponse {
-  hello: string;
-}
+export const rootHandler = async (req: Request, res: Response) => {
+  try {
+    const blockNumber = Number(req.query.blockNumber)
+    const block = new Block(blockNumber)
+    const txns = await block.getTransactions()
 
-type HelloBuilder = (name: string) => HelloResponse;
-
-const helloBuilder: HelloBuilder = name => ({ hello: name });
-
-export const rootHandler = (_req: Request, res: Response) => {
-  return res.send('API is working 🤓');
-};
-
-export const helloHandler = (req: Request, res: Response) => {
-  const { params } = req;
-  const { name = 'World' } = params;
-  const response = helloBuilder(name);
-
-  return res.json(response);
+    return res.json(txns)
+  } catch(e) {
+    captureException(e)
+    return res.status(500).send('Something broke!')
+  }
 };
