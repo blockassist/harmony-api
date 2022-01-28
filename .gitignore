@@ -27,3 +27,8 @@ build/
 
 # Misc
 .DS_Store
+
+.env.local
+
+# Ignore temp folder
+tmp/

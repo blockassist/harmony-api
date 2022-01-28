@@ -11,11 +11,18 @@
   },
   "plugins": ["@typescript-eslint", "jest"],
   "extends": [
+    "airbnb-base",
+    "airbnb-typescript/base",
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:jest/recommended",
     "prettier"
   ],
-  "rules": {}
+  "rules": {
+    "no-console": 0,
+    "import/prefer-default-export": 0,
+    "func-names": 0,
+    "@typescript-eslint/no-use-before-define": 0
+  }
 }
