@@ -32,7 +32,8 @@
     "build": "tsc -p tsconfig.release.json",
     "build:watch": "tsc -w -p tsconfig.release.json",
     "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix"
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "test": "tsc && npm run lint"
   },
   "author": "Brian Vogelgesang <kida001@users.noreply.github.com>",
   "dependencies": {
