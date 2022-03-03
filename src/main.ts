@@ -1,7 +1,7 @@
 import express from 'express';
-import dotenv from "dotenv"
+import dotenv from 'dotenv'
 import errorHandler from './api/middleware/errorHandler'
-import { rootHandler } from './handlers/handlers';
+import { rootHandler, testHandler } from './handlers/handlers'
 
 if (process.env.NODE_ENV === 'development') dotenv.config({ path: './.env.local' })
 
@@ -11,7 +11,8 @@ const port = process.env.PORT || '3000';
 app.use(errorHandler);
 
 app.get('/', rootHandler);
+app.get('/test', testHandler);
 
 app.listen(port, () => {
-  console.log(`Server is running at: http://localhost:${port}`);
+  console.log(`Server is running at: http://localhost:${port}`)
 });
