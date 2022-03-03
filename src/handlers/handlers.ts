@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
+import { Request, Response } from 'express'
 import captureException from '../lib/captureException'
-import Block from '../lib/harmony/Block';
+import Block from '../lib/harmony/Block'
 
 export const rootHandler = async (req: Request, res: Response) => {
   try {
@@ -14,3 +14,5 @@ export const rootHandler = async (req: Request, res: Response) => {
     return res.status(500).send('Something broke!')
   }
 };
+
+export const testHandler = async (_req: Request, res: Response) => res.json('ok')

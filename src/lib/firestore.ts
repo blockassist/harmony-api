@@ -13,13 +13,15 @@ function client(): Firestore {
   return firestoreClient
 }
 
-async function getSubscribedAddresses(): Promise<string[]> {
+async function getSubscribedAddresses(): Promise<Record<string, boolean>> {
+  const results = {}
   const collectionName = `addresses-${process.env.ENV_NAME}`
-  const documentReferences = await client()
+  const documents = await client()
         .collection(collectionName)
         .listDocuments()
 
-  return documentReferences.map(it => it.id)
+  documents.forEach((d) => { results[d.id] = true })
+  return results
 }
 
 export { getSubscribedAddresses }

@@ -1,3 +1,6 @@
+import EventLog from './EventLog'
+import Contract from './Contract'
+
 interface HarmonyLog {
   address: string;
   topics: string[];
@@ -8,9 +11,12 @@ interface HarmonyLog {
   blockHash: string;
   logIndex: string;
   removed: boolean;
+  contract?: Contract;
+  eventLog?: EventLog;
 }
 
 interface HarmonyTransaction {
+  functionName?: string | null;
   blockHash: string;
   blockNumber: number;
   from: string;
@@ -30,6 +36,7 @@ interface HarmonyTransaction {
   r: string;
   s: string;
   logs: HarmonyLog[];
+  addresses?: string[];
 }
 
 interface HarmonyTransactionDict {

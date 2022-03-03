@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse } from 'axios';
 import { DefaultParams } from '../../interfaces/harmony/Client';
 import captureException from '../captureException'
 

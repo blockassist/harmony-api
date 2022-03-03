@@ -23,6 +23,7 @@
     "no-console": 0,
     "import/prefer-default-export": 0,
     "func-names": 0,
-    "@typescript-eslint/no-use-before-define": 0
+    "@typescript-eslint/no-use-before-define": 0,
+    "no-continue": 0
   }
 }
