@@ -1,5 +1,6 @@
 import admin from 'firebase-admin'
 import { Firestore } from 'firebase-admin/firestore'
+import { HarmonyTransaction } from '../interfaces/harmony/Block'
 import captureException from './captureException'
 
 let firestoreClient:Firestore | null = null;
@@ -14,15 +15,13 @@ function client(): Firestore {
   return firestoreClient
 }
 
-async function getSubscribedAddresses(): Promise<Record<string, boolean>> {
-  const results = {}
+async function getSubscribedAddresses(): Promise<string[]> {
   const collectionName = `addresses-${process.env.ENV_NAME}`
   const documents = await client()
         .collection(collectionName)
         .listDocuments()
 
-  documents.forEach((d) => { results[d.id] = true })
-  return results
+  return documents.map((d) => d.id)
 }
 
 async function getlastBlockNumber(): Promise<number|null> {
@@ -53,4 +52,22 @@ async function updateLastBlockNumber(lastBlockNumber: number): Promise<boolean> 
   }
 }
 
-export { getSubscribedAddresses, getlastBlockNumber, updateLastBlockNumber }
+async function batchCreateTransactions(transactions: HarmonyTransaction[]): Promise<boolean> {
+  try {
+    const batch = client().batch();
+    const collectionName = `transactions-${process.env.ENV_NAME}`
+    transactions.forEach((txn) => {
+      const document = client().collection(collectionName).doc(txn.hash)
+      batch.set(document, txn)
+    })
+
+    await batch.commit()
+
+    return true
+  } catch(e) {
+    captureException(e)
+    return false
+  }
+}
+
+export { getSubscribedAddresses, getlastBlockNumber, updateLastBlockNumber, batchCreateTransactions }
