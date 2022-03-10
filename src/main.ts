@@ -1,18 +1,35 @@
-import express from 'express';
+/* eslint-disable no-constant-condition */
+/* eslint-disable no-await-in-loop */
+
 import dotenv from 'dotenv'
-import errorHandler from './api/middleware/errorHandler'
-import { rootHandler, testHandler } from './handlers/handlers'
+import BlockManager from './lib/harmony/BlockManager'
+import captureException from './lib/captureException'
 
-if (process.env.NODE_ENV === 'development') dotenv.config({ path: './.env.local' })
+if (process.env.NODE_ENV === 'development') dotenv.config({ path: './.env.local' });
 
-const app = express();
-const port = process.env.PORT || '3000';
+function sleep(duration) {
+  return new Promise((resolve) => {
+    setTimeout(()=> { resolve(0) }, duration);
+  })
+}
 
-app.use(errorHandler);
+// Loops forever. Process is managed on servers by PM2
+(async() => {
+  try {
+    while (true) {
+      try {
+        console.log('I\'m runninggggg')
+        await BlockManager()
+        console.log('I done did it!')
+        await sleep(10000)
+      } catch(e) {
+        console.log(e)
+        captureException(e)
+      }
+    }
+  } catch(e) {
+    console.log(e)
+    captureException(e)
+  }
+})();
 
-app.get('/', rootHandler);
-app.get('/test', testHandler);
-
-app.listen(port, () => {
-  console.log(`Server is running at: http://localhost:${port}`)
-});

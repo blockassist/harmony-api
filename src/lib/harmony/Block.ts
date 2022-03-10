@@ -25,7 +25,7 @@ export default class Block {
     const addresses = []
     topics.slice(1).forEach((val) => {
       const address = topicToAddress(val)
-      if (address !== null) addresses.push(address);
+      if (address !== null) addresses.push(address.toLowerCase());
     })
     return addresses
   }
@@ -66,8 +66,8 @@ export default class Block {
 
       // Set basic values on transaction and initialize arrays
       this.transactions[txn.hash].functionName = functionName
-      this.transactions[txn.hash].to = to
-      this.transactions[txn.hash].from = from
+      this.transactions[txn.hash].to = to.toLowerCase()
+      this.transactions[txn.hash].from = from.toLowerCase()
       this.transactions[txn.hash].logs = []
       this.transactions[txn.hash].addresses = []
       this.transactions[txn.hash].addresses.push(this.transactions[txn.hash].to)
