@@ -43,6 +43,12 @@ export default class Block {
     if (results[0] === null || results[1] === null) throw new NullTransactionsError(msg)
   }
 
+  private static isToFromEmpty(txn: HarmonyTransaction): boolean {
+    if (txn.to === '' || txn.to === null) return true;
+    if (txn.from === '' || txn.from === null) return true;
+    return false
+  }
+
   private async gatherTransactions(): Promise<void> {
     const results = await Promise.all([
       getBlockByNum(this.blockNum),
@@ -54,25 +60,29 @@ export default class Block {
     this.txnLogs = results[1].data.result
   }
 
+  private static convertHarmonyAddresses(txn: HarmonyTransaction): string[] {
+    const to = converter('one').toHex(txn.to)
+    const from = converter('one').toHex(txn.from)
+    return [to.toLowerCase(), from.toLowerCase()]
+  }
+
   private async combine(): Promise<void> {
     this.transactions = {}
-    this.txns.forEach(async (txn) => {
+    for (const txn of this.txns) {  // eslint-disable-line no-restricted-syntax
+      if (Block.isToFromEmpty(txn)) return;
       this.transactions[txn.hash] = txn
-
-      // Convert harmony addres (one3Fc3h02...) to hex address (0x2fca..)
-      const [to, from] = [converter('one').toHex(txn.to), converter('one').toHex(txn.from)]
-      // Extracts function signature from transaction
-      const functionName = await getSignature(txn.input.slice(0,10))
+      const [to, from] = Block.convertHarmonyAddresses(txn)
+      const functionName = await getSignature(txn.input.slice(0,10)) // eslint-disable-line no-await-in-loop
 
       // Set basic values on transaction and initialize arrays
-      this.transactions[txn.hash].functionName = functionName
-      this.transactions[txn.hash].to = to.toLowerCase()
-      this.transactions[txn.hash].from = from.toLowerCase()
-      this.transactions[txn.hash].logs = []
-      this.transactions[txn.hash].addresses = []
-      this.transactions[txn.hash].addresses.push(this.transactions[txn.hash].to)
-      this.transactions[txn.hash].addresses.push(this.transactions[txn.hash].from)
-    })
+      Object.assign(this.transactions[txn.hash], {
+        functionName,
+        to,
+        from,
+        logs: [],
+        addresses: [to, from]
+      });
+    }
 
     // Process logs and add them to main transaction object
     for (const txnLog of this.txnLogs) { // eslint-disable-line no-restricted-syntax
