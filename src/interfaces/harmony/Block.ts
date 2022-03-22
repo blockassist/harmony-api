@@ -1,6 +1,14 @@
 import EventLog from './EventLog'
 import Contract from './Contract'
 
+interface LogSummary {
+  event: string;
+  value: string;
+  asset: string;
+  from: string | unknown;
+  to: string | unknown;
+}
+
 interface HarmonyLog {
   address: string;
   topics: string[];
@@ -13,6 +21,7 @@ interface HarmonyLog {
   removed: boolean;
   contract?: Contract;
   eventLog?: EventLog;
+  summary?: LogSummary;
 }
 
 interface HarmonyTransaction {
@@ -37,10 +46,11 @@ interface HarmonyTransaction {
   s: string;
   logs: HarmonyLog[];
   addresses?: string[];
+  asset: string;
 }
 
 interface HarmonyTransactionDict {
   [key : string]: HarmonyTransaction;
 }
 
-export { HarmonyTransaction, HarmonyLog, HarmonyTransactionDict }
+export { HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary }
