@@ -120,17 +120,21 @@ export default class Block {
     this.transactions = {}
     for (const txn of this.txns) {  // eslint-disable-line no-restricted-syntax
       if (Block.isToFromEmpty(txn)) return;
+
       this.transactions[txn.hash] = txn
       const [to, from] = Block.convertHarmonyAddresses(txn)
       const functionName = await getSignature(txn.input.slice(0,10)) // eslint-disable-line no-await-in-loop
+      const totalGas = ((txn.gasPrice * txn.gas)/10**18).toString()
       // Set basic values on transaction and initialize arrays
       Object.assign(this.transactions[txn.hash], {
         functionName,
         to,
         from,
+        totalGas,
         logs: [],
         addresses: [to, from],
-        asset: 'ONE'
+        asset: 'ONE',
+        sortField: Date.now()
       });
     }
 

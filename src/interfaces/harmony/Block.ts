@@ -32,6 +32,7 @@ interface HarmonyTransaction {
   timestamp: number;
   gas: number;
   gasPrice: number;
+  totalGas: string;
   hash: string;
   ethHash: string;
   input: string | null;
@@ -47,6 +48,7 @@ interface HarmonyTransaction {
   logs: HarmonyLog[];
   addresses?: string[];
   asset: string;
+  sortField?: number;
 }
 
 interface HarmonyTransactionDict {
