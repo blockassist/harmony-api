@@ -65,7 +65,11 @@ export default class Block {
     if (typeof(value) !== 'string') return '0';
 
     const numValue: number = parseInt(value, 10)
-    return (numValue/10**decimals).toString()
+    return Block.parseValue(numValue, decimals)
+  }
+
+  private static parseValue(value: number, decimals = 18): string {
+    return (value/10**decimals).toString()
   }
 
   private static getLogDecimals(log: HarmonyLog): number | null {
@@ -124,6 +128,7 @@ export default class Block {
 
       this.transactions[txn.hash] = txn
       const [to, from] = Block.convertHarmonyAddresses(txn)
+      const parsedValue = Block.parseValue(txn.value)
       const functionName = await getSignature(txn.input.slice(0,10)) // eslint-disable-line no-await-in-loop
       const totalGas = ((txn.gasPrice * txn.gas)/10**18).toString()
       // Set basic values on transaction and initialize arrays
@@ -135,7 +140,8 @@ export default class Block {
         logs: [],
         addresses: [to, from],
         asset: 'ONE',
-        sortField: Date.now()
+        sortField: Date.now(),
+        parsedValue
       });
     }
 

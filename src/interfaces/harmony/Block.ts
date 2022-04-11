@@ -40,6 +40,7 @@ interface HarmonyTransaction {
   to: string;
   transactionIndex: number;
   value: number;
+  parsedValue?: string;
   shardID: number;
   toShardID: number;
   v: string;
