@@ -4,7 +4,7 @@ import converter from 'bech32-converting'
 import { HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary } from '../../interfaces/harmony/Block'
 import EventLog from '../../interfaces/harmony/EventLog'
 import { getBlockByNum, getLogs } from './client'
-import { NullTransactionsError } from './HarmonyErrors'
+import { NullTransactionsError, WaitForBlockError } from './HarmonyErrors'
 import { getContract, topicToAddress } from './web3Client'
 import erc20Abi from '../erc20Abi'
 import getSignature from '../erc20Signature'
@@ -38,9 +38,10 @@ export default class Block {
     }
   }
 
-  private static validateResults(results: Array<AxiosResponse|null>): NullTransactionsError|void {
+  private static validateResults(results: Array<AxiosResponse|null>): NullTransactionsError|WaitForBlockError|void {
     const msg = 'Response is null from Harmony Client, cannot parse transactions'
     if (results[0] === null || results[1] === null) throw new NullTransactionsError(msg)
+    if (results[0]?.data?.error?.code === -32000) throw new WaitForBlockError('Wait for next block')
   }
 
   private static isToFromEmpty(txn: HarmonyTransaction): boolean {

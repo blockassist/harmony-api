@@ -1,11 +1,18 @@
 import BlockProcessor from './BlockProcessor'
 import { getlastBlockNumber, updateLastBlockNumber } from '../firestore'
-
+import { WaitForBlockError } from './HarmonyErrors'
+import captureException from '../captureException'
 
 export default async function (): Promise<void> {
-  const currentBlockNumber = await getNextBlockNumber()
-  await processBlock(currentBlockNumber)
-  await updateLastBlockNumber(currentBlockNumber)
+  try {
+    const currentBlockNumber = await getNextBlockNumber()
+    await processBlock(currentBlockNumber)
+    await updateLastBlockNumber(currentBlockNumber)
+    console.log(`Successfully processed Block: ${currentBlockNumber}`)
+  } catch(e) {
+    if (e instanceof WaitForBlockError) return;
+    captureException(e);
+  }
 }
 
 async function processBlock(blockNumber: number): Promise<void> {

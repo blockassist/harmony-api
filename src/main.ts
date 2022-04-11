@@ -14,7 +14,6 @@ if (process.env.NODE_ENV === 'development') dotenv.config({ path: './.env.local'
       try {
         console.log('I\'m runninggggg')
         await BlockManager()
-        console.log('I done did it!')
       } catch(e) {
         console.log(e)
         captureException(e)
