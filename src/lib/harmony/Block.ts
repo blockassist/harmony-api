@@ -100,7 +100,7 @@ export default class Block {
 
   private static summarizeLog(log: HarmonyLog): LogSummary {
     const value = Block.parseLogValue(log)
-    const asset = log.contract.symbol || 'ONE'
+    const asset = log?.contract?.symbol || 'ONE'
     return {
       value,
       asset,
