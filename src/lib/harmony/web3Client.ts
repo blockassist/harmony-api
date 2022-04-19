@@ -6,7 +6,7 @@ import erc20Abi from '../erc20Abi'
 
 let w3Client;
 let redis;
-const badContractExpTime = 864000
+const RedisExpTime = 864000
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function web3Client(): any {
@@ -67,7 +67,7 @@ function redisClient(): Redis {
 
 async function cacheContract(contract: Contract): Promise<void> {
   const contractKey = `contract-${contract.address}`
-  await redisClient().setObjectAsync(contractKey, contract)
+  await redisClient().setExObjectAsync(contractKey, contract, RedisExpTime)
 }
 
 async function isBadContract(address: string): Promise<boolean> {
@@ -78,7 +78,7 @@ async function isBadContract(address: string): Promise<boolean> {
 
 async function cacheBadContract(address: string): Promise<void> {
   const contractKey = `badcontract-${address}`
-  await redisClient().setExAsync(contractKey, '0', badContractExpTime)
+  await redisClient().setExAsync(contractKey, '0', RedisExpTime)
 }
 
 async function getContractFromCache(address: string): Promise<Contract|null> {
