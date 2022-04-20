@@ -3,6 +3,7 @@ import { DefaultParams } from '../../interfaces/harmony/Client';
 import captureException from '../captureException'
 
 const harmonyUrl = 'https://rpc.s0.t.hmny.io'
+const internalsUrl = 'https://explorer-v2-api.hmny.io/v0/shard/0/internalTransaction/block/number/'
 
 async function getBlockByNum(blockNum: number): Promise<AxiosResponse|null> {
   try {
@@ -30,6 +31,17 @@ async function getLogs(blockHex: string): Promise<AxiosResponse|null> {
   }
 }
 
+async function getInternals(blockNum: number): Promise<AxiosResponse|null> {
+  try {
+    const url = `${internalsUrl}${blockNum}`
+    const response = await axios.get(url)
+    return response
+  } catch(e) {
+    captureException(e)
+    return null
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function defaultParams(method: string, params: any[]): DefaultParams {
   return {
@@ -40,4 +52,4 @@ function defaultParams(method: string, params: any[]): DefaultParams {
   }
 }
 
-export { getBlockByNum, getLogs }
+export { getBlockByNum, getLogs, getInternals }
