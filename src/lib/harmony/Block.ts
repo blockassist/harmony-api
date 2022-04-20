@@ -1,9 +1,9 @@
 import { AxiosResponse } from 'axios'
 import parseLog  from 'eth-log-parser'
 import converter from 'bech32-converting'
-import { HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary } from '../../interfaces/harmony/Block'
+import { HarmonyInternalTransaction, HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary } from '../../interfaces/harmony/Block'
 import EventLog from '../../interfaces/harmony/EventLog'
-import { getBlockByNum, getLogs } from './client'
+import { getBlockByNum, getLogs, getInternals } from './client'
 import { NullTransactionsError, WaitForBlockError } from './HarmonyErrors'
 import { getContract, topicToAddress } from './web3Client'
 import erc20Abi from '../erc20Abi'
@@ -18,6 +18,8 @@ export default class Block {
   public async getTransactions(): Promise<HarmonyTransactionDict> {
     await this.gatherTransactions()
     await this.combine()
+    this.processInternals()
+
     return this.transactions
   }
 
@@ -110,15 +112,22 @@ export default class Block {
     }
   }
 
+  private static mergeAddresses(existingAddresses: string[], addtlAddresses: string[]): string[] {
+    const newAddresses = [...existingAddresses, ...addtlAddresses]
+    return Array.from(new Set(newAddresses)) // De-dupe and return
+  }
+
   private async gatherTransactions(): Promise<void> {
     const results = await Promise.all([
       getBlockByNum(this.blockNum),
-      getLogs(this.blockHex)
+      getLogs(this.blockHex),
+      getInternals(this.blockNum)
     ])
 
     Block.validateResults(results)
     this.txns = results[0].data.result.transactions
     this.txnLogs = results[1].data.result
+    this.internalTxns = results[2].data
   }
 
   private async combine(): Promise<void> {
@@ -138,6 +147,7 @@ export default class Block {
         from,
         totalGas,
         logs: [],
+        internals: [],
         addresses: [to, from],
         asset: 'ONE',
         sortField: Date.now(),
@@ -168,11 +178,65 @@ export default class Block {
       const topicAddresses = Block.addressesFromTopics(txnLog.topics)
       if (topicAddresses.length > 0) {
         const existingAddresses = this.transactions[txnHash].addresses
-        let newAddresses = [...existingAddresses, ...topicAddresses]
-        newAddresses = Array.from(new Set(newAddresses)) // De-dupe
-        this.transactions[txnHash].addresses = newAddresses
+        this.transactions[txnHash].addresses = Block.mergeAddresses(existingAddresses, topicAddresses)
       }
+    }
+  }
 
+  private hasMatchingToplevel(internalTxn: HarmonyInternalTransaction): boolean {
+    const txn = this.transactions[internalTxn.transactionHash]
+    if (txn === undefined) return false;
+
+    return (txn.value === parseInt(internalTxn.value, 10)) && (txn.from === internalTxn.from) && (txn.to === internalTxn.to)
+  }
+
+  private processInternals(): void {
+    for (const txn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
+      if (txn.value === '0') continue;
+      if (txn.error !== '') continue;
+      if (this.hasMatchingToplevel(txn)) continue;
+
+      if (this.transactions[txn.transactionHash]) {
+        this.addInternalToTxns(txn)
+      } else {
+        const topLevelTxn = this.createTopLevelFromInternal(txn)
+        this.transactions[topLevelTxn.hash] = topLevelTxn
+      }
+    }
+  }
+
+  private addInternalToTxns(txn: HarmonyInternalTransaction): void {
+    const txnHash = txn.transactionHash
+    this.transactions[txnHash].internals.push(txn)
+
+    const existingAddresses = this.transactions[txnHash].addresses
+    const newAddresses = [txn.to, txn.from]
+    this.transactions[txnHash].addresses = Block.mergeAddresses(existingAddresses, newAddresses)
+  }
+
+  private createTopLevelFromInternal(txn: HarmonyInternalTransaction): HarmonyTransaction {
+    const gas = parseInt(txn.gasUsed, 10)
+    const gasPrice = parseInt(txn.gas, 10)
+    const totalGas = ((gasPrice * gas)/10**18).toString()
+    const parsedValue = Block.parseValue(parseInt(txn.value, 10))
+    return {
+      functionName: 'Internal',
+      blockNumber: this.blockNum,
+      from: txn.from,
+      to: txn.to,
+      timestamp: Date.now(),
+      sortField: Date.now(),
+      totalGas,
+      gasPrice,
+      gas,
+      hash: txn.transactionHash,
+      input: txn.input,
+      transactionIndex: txn.index,
+      value: parseInt(txn.value, 10),
+      parsedValue,
+      logs: [],
+      addresses: [txn.from, txn.to],
+      asset: 'ONE'
     }
   }
 
@@ -183,6 +247,8 @@ export default class Block {
   txnLogs: HarmonyLog[]
 
   txns: HarmonyTransaction[]
+
+  internalTxns: HarmonyInternalTransaction[]
 
   transactions: HarmonyTransactionDict
 }

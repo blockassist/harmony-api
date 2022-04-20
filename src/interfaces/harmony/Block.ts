@@ -26,7 +26,7 @@ interface HarmonyLog {
 
 interface HarmonyTransaction {
   functionName?: string | null;
-  blockHash: string;
+  blockHash?: string;
   blockNumber: number;
   from: string;
   timestamp: number;
@@ -34,26 +34,43 @@ interface HarmonyTransaction {
   gasPrice: number;
   totalGas: string;
   hash: string;
-  ethHash: string;
+  ethHash?: string;
   input: string | null;
-  nonce: number;
+  nonce?: number;
   to: string;
   transactionIndex: number;
   value: number;
   parsedValue?: string;
-  shardID: number;
-  toShardID: number;
-  v: string;
-  r: string;
-  s: string;
+  shardID?: number;
+  toShardID?: number;
+  v?: string;
+  r?: string;
+  s?: string;
   logs: HarmonyLog[];
+  internals?: HarmonyInternalTransaction[]
   addresses?: string[];
   asset: string;
   sortField?: number;
+}
+
+interface HarmonyInternalTransaction {
+  index: number;
+  blockNumber: string;
+  from: string;
+  to: string;
+  gas: string;
+  gasUsed: string;
+  input: string;
+  output: string;
+  type: string;
+  value: string;
+  transactionHash: string;
+  time: number | string | null;
+  error: string
 }
 
 interface HarmonyTransactionDict {
   [key : string]: HarmonyTransaction;
 }
 
-export { HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary }
+export { HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary, HarmonyInternalTransaction }
