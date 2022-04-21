@@ -52,6 +52,17 @@ async function updateLastBlockNumber(lastBlockNumber: number): Promise<boolean> 
   }
 }
 
+async function logHarmonyError(errorType: string): Promise<void> {
+  try {
+    const recordedAt = Date.now()
+    const collectionName = `harmony-errors-${process.env.ENV_NAME}`
+    const document = client().collection(collectionName).doc(errorType)
+    await document.set({ errorType, recordedAt })
+  } catch(e) {
+    captureException(e)
+  }
+}
+
 async function batchCreateTransactions(transactions: HarmonyTransaction[]): Promise<boolean> {
   try {
     const batch = client().batch();
@@ -70,4 +81,4 @@ async function batchCreateTransactions(transactions: HarmonyTransaction[]): Prom
   }
 }
 
-export { getSubscribedAddresses, getlastBlockNumber, updateLastBlockNumber, batchCreateTransactions }
+export { getSubscribedAddresses, getlastBlockNumber, updateLastBlockNumber, batchCreateTransactions, logHarmonyError }
