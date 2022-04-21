@@ -4,10 +4,11 @@ import converter from 'bech32-converting'
 import { HarmonyInternalTransaction, HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary } from '../../interfaces/harmony/Block'
 import EventLog from '../../interfaces/harmony/EventLog'
 import { getBlockByNum, getLogs, getInternals } from './client'
-import { NullTransactionsError, WaitForBlockError } from './HarmonyErrors'
+import { NullTransactionsError, WaitForBlockError, HarmonyResponseError, NoHarmonyInternals } from './HarmonyErrors'
 import { getContract, topicToAddress } from './web3Client'
 import erc20Abi from '../erc20Abi'
 import getSignature from '../erc20Signature'
+import captureException from '../captureException'
 
 export default class Block {
   constructor(blockNum: number) {
@@ -42,8 +43,10 @@ export default class Block {
 
   private static validateResults(results: Array<AxiosResponse|null>): NullTransactionsError|WaitForBlockError|void {
     const msg = 'Response is null from Harmony Client, cannot parse transactions'
-    if (results[0] === null || results[1] === null) throw new NullTransactionsError(msg)
-    if (results[0]?.data?.error?.code === -32000) throw new WaitForBlockError('Wait for next block')
+    if (results[0] === null || results[1] === null) throw new NullTransactionsError(msg);
+    if (results[0]?.data?.error?.code === -32000) throw new WaitForBlockError('Wait for next block');
+    if (results[0]?.data?.error != null) throw new HarmonyResponseError(results[0]?.data?.error?.message)
+    if (results[1]?.data?.error != null) throw new HarmonyResponseError(results[1]?.data?.error?.message)
   }
 
   private static isToFromEmpty(txn: HarmonyTransaction): boolean {
@@ -127,7 +130,7 @@ export default class Block {
     Block.validateResults(results)
     this.txns = results[0].data.result.transactions
     this.txnLogs = results[1].data.result
-    this.internalTxns = results[2].data
+    this.internalTxns = results[2]?.data
   }
 
   private async combine(): Promise<void> {
@@ -190,7 +193,18 @@ export default class Block {
     return (txn.value === parseInt(internalTxn.value, 10)) && (txn.from === internalTxn.from) && (txn.to === internalTxn.to)
   }
 
+  private internalsPresent(): boolean {
+    if (this.internalTxns != null && this.internalTxns[0]?.transactionHash != null) return true;
+
+    const e = new NoHarmonyInternals(`BlockNum: ${this.blockNum}`)
+    captureException(e)
+
+    return false;
+  }
+
   private processInternals(): void {
+    if (!this.internalsPresent()) return;
+
     for (const txn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
       if (txn.value === '0') continue;
       if (txn.error !== '') continue;
@@ -235,6 +249,7 @@ export default class Block {
       value: parseInt(txn.value, 10),
       parsedValue,
       logs: [],
+      internals: [],
       addresses: [txn.from, txn.to],
       asset: 'ONE'
     }
