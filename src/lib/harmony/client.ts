@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import { DefaultParams } from '../../interfaces/harmony/Client';
+import { logHarmonyError } from '../firestore';
 import captureException from '../captureException'
 
 const harmonyUrl = 'https://rpc.s0.t.hmny.io'
@@ -14,6 +15,7 @@ async function getBlockByNum(blockNum: number): Promise<AxiosResponse|null> {
     return response
   } catch(e) {
     captureException(e)
+    await logHarmonyError('GetBlockAxiosException')
     return null
   }
 }
@@ -27,6 +29,7 @@ async function getLogs(blockHex: string): Promise<AxiosResponse|null> {
     return response
   } catch(e) {
     captureException(e)
+    await logHarmonyError('GetLogsAxiosException')
     return null
   }
 }
@@ -38,6 +41,7 @@ async function getInternals(blockNum: number): Promise<AxiosResponse|null> {
     return response
   } catch(e) {
     captureException(e)
+    await logHarmonyError('GetInternalsAxiosException')
     return null
   }
 }

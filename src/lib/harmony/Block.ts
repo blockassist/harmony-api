@@ -4,11 +4,11 @@ import converter from 'bech32-converting'
 import { HarmonyInternalTransaction, HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary } from '../../interfaces/harmony/Block'
 import EventLog from '../../interfaces/harmony/EventLog'
 import { getBlockByNum, getLogs, getInternals } from './client'
-import { NullTransactionsError, WaitForBlockError, HarmonyResponseError, NoHarmonyInternals } from './HarmonyErrors'
+import { NullTransactionsError, WaitForBlockError, HarmonyResponseError } from './HarmonyErrors'
 import { getContract, topicToAddress } from './web3Client'
 import erc20Abi from '../erc20Abi'
 import getSignature from '../erc20Signature'
-import captureException from '../captureException'
+import { logHarmonyError } from '../firestore'
 
 export default class Block {
   constructor(blockNum: number) {
@@ -41,12 +41,24 @@ export default class Block {
     }
   }
 
-  private static validateResults(results: Array<AxiosResponse|null>): NullTransactionsError|WaitForBlockError|void {
+  private static async validateResults(results: Array<AxiosResponse|null>): Promise<NullTransactionsError|WaitForBlockError|HarmonyResponseError|void> {
     const msg = 'Response is null from Harmony Client, cannot parse transactions'
-    if (results[0] === null || results[1] === null) throw new NullTransactionsError(msg);
-    if (results[0]?.data?.error?.code === -32000) throw new WaitForBlockError('Wait for next block');
-    if (results[0]?.data?.error != null) throw new HarmonyResponseError(results[0]?.data?.error?.message)
-    if (results[1]?.data?.error != null) throw new HarmonyResponseError(results[1]?.data?.error?.message)
+    if (results[0] === null || results[1] === null) {
+      await logHarmonyError('NullTransactionsError')
+      throw new NullTransactionsError(msg)
+    }
+
+    if (results[0]?.data?.error?.code === -32000) throw new WaitForBlockError('Wait for next block')
+
+    if (results[0]?.data?.error != null) {
+      await logHarmonyError('HarmonyBlockResponseError')
+      throw new HarmonyResponseError(results[0]?.data?.error?.message)
+    }
+
+    if (results[1]?.data?.error != null) {
+      await logHarmonyError('HarmonyLogsResponseError')
+      throw new HarmonyResponseError(results[1]?.data?.error?.message)
+    }
   }
 
   private static isToFromEmpty(txn: HarmonyTransaction): boolean {
@@ -127,7 +139,7 @@ export default class Block {
       getInternals(this.blockNum)
     ])
 
-    Block.validateResults(results)
+    await Block.validateResults(results)
     this.txns = results[0].data.result.transactions
     this.txnLogs = results[1].data.result
     this.internalTxns = results[2]?.data
@@ -193,17 +205,15 @@ export default class Block {
     return (txn.value === parseInt(internalTxn.value, 10)) && (txn.from === internalTxn.from) && (txn.to === internalTxn.to)
   }
 
-  private internalsPresent(): boolean {
+  private async internalsPresent(): Promise<boolean> {
     if (this.internalTxns != null && this.internalTxns[0]?.transactionHash != null) return true;
-
-    const e = new NoHarmonyInternals(`BlockNum: ${this.blockNum}`)
-    captureException(e)
-
+    await logHarmonyError('NoHarmonyInternals')
     return false;
   }
 
-  private processInternals(): void {
-    if (!this.internalsPresent()) return;
+  private async processInternals(): Promise<void> {
+    const internalsPresent = await this.internalsPresent()
+    if (!internalsPresent) return;
 
     for (const txn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
       if (txn.value === '0') continue;
