@@ -220,6 +220,8 @@ export default class Block {
       if (txn.error !== '') continue;
       if (this.hasMatchingToplevel(txn)) continue;
 
+      txn.parsedValue = Block.parseValue(parseInt(txn.value, 10))
+
       if (this.transactions[txn.transactionHash]) {
         this.addInternalToTxns(txn)
       } else {
@@ -242,7 +244,6 @@ export default class Block {
     const gas = parseInt(txn.gasUsed, 10)
     const gasPrice = parseInt(txn.gas, 10)
     const totalGas = ((gasPrice * gas)/10**18).toString()
-    const parsedValue = Block.parseValue(parseInt(txn.value, 10))
     return {
       functionName: 'Internal',
       blockNumber: this.blockNum,
@@ -257,7 +258,7 @@ export default class Block {
       input: txn.input,
       transactionIndex: txn.index,
       value: parseInt(txn.value, 10),
-      parsedValue,
+      parsedValue: txn.parsedValue,
       logs: [],
       internals: [],
       addresses: [txn.from, txn.to],

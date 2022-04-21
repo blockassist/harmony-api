@@ -64,6 +64,7 @@ interface HarmonyInternalTransaction {
   output: string;
   type: string;
   value: string;
+  parsedValue?: string;
   transactionHash: string;
   time: number | string | null;
   error: string
