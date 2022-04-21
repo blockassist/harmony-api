@@ -131,6 +131,8 @@ export default class Block {
     this.txns = results[0].data.result.transactions
     this.txnLogs = results[1].data.result
     this.internalTxns = results[2]?.data
+    console.log("*******************")
+    console.log(results[2])
   }
 
   private async combine(): Promise<void> {
