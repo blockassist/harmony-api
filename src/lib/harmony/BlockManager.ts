@@ -1,5 +1,6 @@
 import BlockProcessor from './BlockProcessor'
 import { getlastBlockNumber, updateLastBlockNumber } from '../firestore'
+import { nextBlockNum } from './client'
 import { WaitForBlockError } from './HarmonyErrors'
 import captureException from '../captureException'
 import Redis from '../Redis'
@@ -9,6 +10,8 @@ let redis;
 export default async function (): Promise<void> {
   try {
     const currentBlockNumber = await getNextBlockNumber()
+    if (await shouldWait(currentBlockNumber)) return;
+
     await processBlock(currentBlockNumber)
     await updateLastBlockNumber(currentBlockNumber)
     console.log(`Successfully processed Block: ${currentBlockNumber}`)
@@ -16,6 +19,16 @@ export default async function (): Promise<void> {
     if (e instanceof WaitForBlockError) return;
     await reportError(e);
   }
+}
+
+async function shouldWait(currentBlockNumber): Promise<boolean> {
+  const nextBlock = await nextBlockNum()
+  if (nextBlock === null) return true;
+
+  const distance = nextBlock - currentBlockNumber
+  if (distance >= 5) return false;
+
+  return true
 }
 
 async function processBlock(blockNumber: number): Promise<void> {
