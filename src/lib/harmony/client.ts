@@ -6,6 +6,18 @@ import captureException from '../captureException'
 const harmonyUrl = 'https://rpc.s0.t.hmny.io'
 const internalsUrl = 'https://explorer-v2-api.hmny.io/v0/shard/0/internalTransaction/block/number/'
 
+
+async function nextBlockNum(): Promise<number|null> {
+  try {
+    const response = await axios.post(harmonyUrl, defaultParams("hmy_blockNumber", []))
+    return parseInt(response.data?.result, 16)
+  } catch(e) {
+    captureException(e)
+    await logHarmonyError('GetNextBlockNumAxiosException')
+    return null
+  }
+}
+
 async function getBlockByNum(blockNum: number): Promise<AxiosResponse|null> {
   try {
     const method = 'hmyv2_getBlockByNumber'
@@ -56,4 +68,4 @@ function defaultParams(method: string, params: any[]): DefaultParams {
   }
 }
 
-export { getBlockByNum, getLogs, getInternals }
+export { getBlockByNum, getLogs, getInternals, nextBlockNum }
