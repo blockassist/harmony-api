@@ -7,7 +7,7 @@ export default class Redis {
   }
 
   private static redisUrl(): string {
-    return process.env.REDIS_URL || 'redis://127.0.0.1:6379/0'
+    return process.env.REDISCLOUD_URL || 'redis://127.0.0.1:6379/0'
   }
 
   async getAsync(key: string): Promise<string | null> {
