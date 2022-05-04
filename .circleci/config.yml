@@ -1,6 +1,7 @@
 version: '2.1'
 orbs:
   node: circleci/node@5.0.0
+  heroku: circleci/heroku@1.2.6
 jobs:
   test:
     executor:
@@ -12,7 +13,47 @@ jobs:
         node-version: '16.13.2'
       - run:
           command: npm run test
+  deploy-job:
+    executor: heroku/default
+    parameters:
+      env:
+        type: string
+        default: staging
+    steps:
+      - checkout
+      - heroku/deploy-via-git:
+          app-name: blockassist-harmony-<< parameters.env >>
+
 workflows:
   test_app:
     jobs:
-      - test
+      - test:
+          filters:
+            branches:
+              ignore:
+                - develop
+                - main
+  build-staging:
+    jobs:
+      - test:
+          name: test-staging-job
+          filters:
+            branches:
+              only: develop
+      - deploy-job:
+          name: deploy-staging-job
+          env: staging
+          requires:
+            - test-staging-job
+  build-production:
+    jobs:
+      - test:
+          name: test-production-job
+          filters:
+            branches:
+              only: main
+      - deploy-job:
+          name: deploy-production-job
+          env: production
+          requires:
+            - test-production-job
