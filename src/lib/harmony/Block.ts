@@ -14,6 +14,7 @@ export default class Block {
   constructor(blockNum: number) {
     this.blockNum = blockNum
     this.blockHex = `0x${blockNum.toString(16)}`
+    this.ethToHash = {}
   }
 
   public async getTransactions(): Promise<HarmonyTransactionDict> {
@@ -151,6 +152,7 @@ export default class Block {
       if (Block.isToFromEmpty(txn)) return;
 
       this.transactions[txn.hash] = txn
+      this.ethToHash[txn.ethHash] = txn.hash // map the ethHash to the TxnHash
       const [to, from] = Block.convertHarmonyAddresses(txn)
       const parsedValue = Block.parseValue(txn.value)
       const functionName = await getSignature(txn.input.slice(0,10)) // eslint-disable-line no-await-in-loop
@@ -199,7 +201,10 @@ export default class Block {
   }
 
   private hasMatchingToplevel(internalTxn: HarmonyInternalTransaction): boolean {
-    const txn = this.transactions[internalTxn.transactionHash]
+    const matchingHash = this.ethToHash[internalTxn.transactionHash]
+    if (matchingHash === undefined) return false;
+
+    const txn = this.transactions[matchingHash]
     if (txn === undefined) return false;
 
     return (txn.value === parseInt(internalTxn.value, 10)) && (txn.from === internalTxn.from) && (txn.to === internalTxn.to)
@@ -218,11 +223,12 @@ export default class Block {
     for (const txn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
       if (txn.value === '0') continue;
       if (txn.error !== '') continue;
-      if (this.hasMatchingToplevel(txn)) continue;
+      const matchingTopLevel = this.hasMatchingToplevel(txn)
+      if (matchingTopLevel) continue;
 
       txn.parsedValue = Block.parseValue(parseInt(txn.value, 10))
 
-      if (this.transactions[txn.transactionHash]) {
+      if (matchingTopLevel) {
         this.addInternalToTxns(txn)
       } else {
         const topLevelTxn = this.createTopLevelFromInternal(txn)
@@ -232,7 +238,7 @@ export default class Block {
   }
 
   private addInternalToTxns(txn: HarmonyInternalTransaction): void {
-    const txnHash = txn.transactionHash
+    const txnHash = this.ethToHash[txn.transactionHash]
     this.transactions[txnHash].internals.push(txn)
 
     const existingAddresses = this.transactions[txnHash].addresses
@@ -265,6 +271,8 @@ export default class Block {
       asset: 'ONE'
     }
   }
+
+  ethToHash: Record<string, string>
 
   blockNum: number
 
