@@ -6,7 +6,7 @@ import erc20Abi from '../erc20Abi'
 
 let w3Client;
 let redis;
-const RedisExpTime = 86400
+const RedisExpTime = 14400
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function web3Client(): any {
