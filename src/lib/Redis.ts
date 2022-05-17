@@ -18,7 +18,7 @@ export default class Redis {
   async setAsync(key: string, value: string, exp?: number): Promise<void> {
     const client = await this.redisClient()
     if (exp != null) {
-      await client.set(key, value, 'EX', exp)
+      await client.set(key, value, { EX: exp })
     } else {
       await client.set(key, value)
     }
