@@ -4,7 +4,7 @@ import Redis from './Redis'
 import SignatureReponse from '../interfaces/SignatureResponse'
 
 let redis;
-const sigExpTime = 14400
+const sigExpTime = 86400
 const NullSigVal = 'NULL SIG'
 
 export default async function getSignature(hex: string): Promise<string | null> {
