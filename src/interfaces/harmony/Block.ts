@@ -55,19 +55,19 @@ interface HarmonyTransaction {
 
 interface HarmonyInternalTransaction {
   index: number;
-  blockNumber: string;
+  blockNumber: number;
   from: string;
   to: string;
-  gas: string;
-  gasUsed: string;
+  gas: number;
+  gasPrice: number;
+  totalGas: string;
   input: string;
   output: string;
-  type: string;
-  value: string;
-  parsedValue?: string;
+  value: number;
+  parsedValue: string;
   transactionHash: string;
+  event?: string;
   time: number | string | null;
-  error: string
 }
 
 interface HarmonyTransactionDict {

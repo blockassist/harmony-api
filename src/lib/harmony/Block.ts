@@ -133,17 +133,65 @@ export default class Block {
     return Array.from(new Set(newAddresses)) // De-dupe and return
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private static parseInternal(txn: any): HarmonyInternalTransaction {
+    const gas = parseInt(txn.result.gasUsed, 10)
+    const gasPrice = parseInt(txn.action.gas, 10)
+    const totalGas = ((gasPrice * gas)/10**18).toString()
+    const value = txn.action.value ? parseInt(txn.action.value, 10): 0
+    const parsedValue = Block.parseValue(value)
+
+    return {
+      index: txn.transactionPosition,
+      blockNumber: txn.blockNumber,
+      from: txn.action.from,
+      to: txn.action.to,
+      totalGas,
+      gasPrice,
+      gas,
+      input: txn.action.input,
+      output: txn.action.output,
+      value,
+      parsedValue,
+      transactionHash: txn.transactionHash,
+      time: Date.now()
+    }
+  }
+
+  private static createTopLevelFromInternal(txn: HarmonyInternalTransaction): HarmonyTransaction {
+    return {
+      functionName: txn.event,
+      blockNumber: txn.blockNumber,
+      from: txn.from,
+      to: txn.to,
+      timestamp: Date.now(),
+      sortField: Date.now(),
+      totalGas: txn.totalGas,
+      gasPrice: txn.gasPrice,
+      gas: txn.gas,
+      hash: txn.transactionHash,
+      input: txn.input,
+      transactionIndex: txn.index,
+      value: txn.value,
+      parsedValue: txn.parsedValue,
+      logs: [],
+      internals: [],
+      addresses: [txn.from, txn.to],
+      asset: 'ONE'
+    }
+  }
+
   private async gatherTransactions(): Promise<void> {
     const results = await Promise.all([
       getBlockByNum(this.blockNum),
       getLogs(this.blockHex),
-      getInternals(this.blockNum)
+      getInternals(this.blockHex)
     ])
 
     await Block.validateResults(results)
     this.txns = results[0].data.result.transactions
     this.txnLogs = results[1].data.result
-    this.internalTxns = results[2]?.data
+    this.internalTxns = results[2].data.result
   }
 
   private async combine(): Promise<void> {
@@ -207,7 +255,7 @@ export default class Block {
     const txn = this.transactions[matchingHash]
     if (txn === undefined) return false;
 
-    return (txn.value === parseInt(internalTxn.value, 10)) && (txn.from === internalTxn.from) && (txn.to === internalTxn.to)
+    return (txn.value === internalTxn.value) && (txn.from === internalTxn.from) && (txn.to === internalTxn.to)
   }
 
   private async internalsPresent(): Promise<boolean> {
@@ -220,18 +268,17 @@ export default class Block {
     const internalsPresent = await this.internalsPresent()
     if (!internalsPresent) return;
 
-    for (const txn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
-      if (txn.value === '0') continue;
-      if (txn.error !== '') continue;
-      const matchingTopLevel = this.hasMatchingToplevel(txn)
-      if (matchingTopLevel) continue;
+    for (const rawTxn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
+      const txn = Block.parseInternal(rawTxn)
+      if (txn.parsedValue === '0') continue;
 
-      txn.parsedValue = Block.parseValue(parseInt(txn.value, 10))
+      const functionName = await getSignature(txn.input.slice(0,10)) || 'Internal' // eslint-disable-line no-await-in-loop
+      txn.event = functionName
 
-      if (matchingTopLevel) {
+      if (this.hasMatchingToplevel(txn)) {
         this.addInternalToTxns(txn)
       } else {
-        const topLevelTxn = this.createTopLevelFromInternal(txn)
+        const topLevelTxn = Block.createTopLevelFromInternal(txn)
         this.transactions[topLevelTxn.hash] = topLevelTxn
       }
     }
@@ -244,32 +291,6 @@ export default class Block {
     const existingAddresses = this.transactions[txnHash].addresses
     const newAddresses = [txn.to, txn.from]
     this.transactions[txnHash].addresses = Block.mergeAddresses(existingAddresses, newAddresses)
-  }
-
-  private createTopLevelFromInternal(txn: HarmonyInternalTransaction): HarmonyTransaction {
-    const gas = parseInt(txn.gasUsed, 10)
-    const gasPrice = parseInt(txn.gas, 10)
-    const totalGas = ((gasPrice * gas)/10**18).toString()
-    return {
-      functionName: 'Internal',
-      blockNumber: this.blockNum,
-      from: txn.from,
-      to: txn.to,
-      timestamp: Date.now(),
-      sortField: Date.now(),
-      totalGas,
-      gasPrice,
-      gas,
-      hash: txn.transactionHash,
-      input: txn.input,
-      transactionIndex: txn.index,
-      value: parseInt(txn.value, 10),
-      parsedValue: txn.parsedValue,
-      logs: [],
-      internals: [],
-      addresses: [txn.from, txn.to],
-      asset: 'ONE'
-    }
   }
 
   ethToHash: Record<string, string>
