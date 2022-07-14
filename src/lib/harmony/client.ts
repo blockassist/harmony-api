@@ -3,9 +3,7 @@ import { DefaultParams } from '../../interfaces/harmony/Client';
 import { logHarmonyError } from '../firestore';
 import captureException from '../captureException'
 
-const harmonyUrl = 'https://rpc.s0.t.hmny.io'
-const internalsUrl = 'https://explorer-v2-api.hmny.io/v0/shard/0/internalTransaction/block/number/'
-
+const harmonyUrl = 'https://a.api.s0.t.hmny.io'
 
 async function nextBlockNum(): Promise<number|null> {
   try {
@@ -46,10 +44,12 @@ async function getLogs(blockHex: string): Promise<AxiosResponse|null> {
   }
 }
 
-async function getInternals(blockNum: number): Promise<AxiosResponse|null> {
+async function getInternals(blockHex: string): Promise<AxiosResponse|null> {
   try {
-    const url = `${internalsUrl}${blockNum}`
-    const response = await axios.get(url)
+    const method = 'trace_block'
+    const methodParams = [blockHex]
+
+    const response = await axios.post(harmonyUrl, defaultParams(method, methodParams))
     return response
   } catch(e) {
     captureException(e)
