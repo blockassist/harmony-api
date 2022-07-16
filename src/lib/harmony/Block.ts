@@ -1,14 +1,17 @@
-import { AxiosResponse } from 'axios'
 import parseLog  from 'eth-log-parser'
 import converter from 'bech32-converting'
 import { HarmonyInternalTransaction, HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary } from '../../interfaces/harmony/Block'
 import EventLog from '../../interfaces/harmony/EventLog'
-import { getBlockByNum, getLogs, getInternals } from './client'
+import { getBlockByNum, getLogs } from './client'
 import { NullTransactionsError, WaitForBlockError, HarmonyResponseError } from './HarmonyErrors'
 import { getContract, topicToAddress } from './web3Client'
 import erc20Abi from '../erc20Abi'
 import getSignature from '../erc20Signature'
 import { logHarmonyError } from '../firestore'
+import captureException from '../captureException'
+import Redis from '../Redis'
+
+let redis = new Redis();
 
 export default class Block {
   constructor(blockNum: number) {
@@ -23,6 +26,38 @@ export default class Block {
     this.processInternals()
 
     return this.transactions
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public static parseInternal(txn: any): HarmonyInternalTransaction|null {
+    if (!txn?.result?.gasUsed || !txn?.action?.gas) return null;
+
+    try {
+      const gas = parseInt(txn.result.gasUsed, 10)
+      const gasPrice = parseInt(txn.action.gas, 10)
+      const totalGas = ((gasPrice * gas)/10**18).toString()
+      const value = txn.action.value ? parseInt(txn.action.value, 10): 0
+      const parsedValue = Block.parseValue(value)
+
+      return {
+        index: txn.transactionPosition,
+        blockNumber: txn.blockNumber,
+        from: txn.action.from,
+        to: txn.action.to,
+        totalGas,
+        gasPrice,
+        gas,
+        input: txn.action.input,
+        output: txn.action.output,
+        value,
+        parsedValue,
+        transactionHash: txn.transactionHash,
+        time: Date.now()
+      }
+    } catch(e) {
+      captureException(e)
+      return null
+    }
   }
 
   private static addressesFromTopics(topics: string[]): string[] {
@@ -42,23 +77,24 @@ export default class Block {
     }
   }
 
-  private static async validateResults(results: Array<AxiosResponse|null>): Promise<NullTransactionsError|WaitForBlockError|HarmonyResponseError|void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private static async validateResults(txns: any, txnLogs: any): Promise<NullTransactionsError|WaitForBlockError|HarmonyResponseError|void> {
     const msg = 'Response is null from Harmony Client, cannot parse transactions'
-    if (results[0] === null || results[1] === null) {
+    if (txns === null || txnLogs === null) {
       await logHarmonyError('NullTransactionsError')
       throw new NullTransactionsError(msg)
     }
 
-    if (results[0]?.data?.error?.code === -32000) throw new WaitForBlockError('Wait for next block')
+    if (txns?.data?.error?.code === -32000) throw new WaitForBlockError('Wait for next block')
 
-    if (results[0]?.data?.error != null) {
+    if (txns?.data?.error != null) {
       await logHarmonyError('HarmonyBlockResponseError')
-      throw new HarmonyResponseError(results[0]?.data?.error?.message)
+      throw new HarmonyResponseError(txns?.data?.error?.message)
     }
 
-    if (results[1]?.data?.error != null) {
+    if (txnLogs?.data?.error != null) {
       await logHarmonyError('HarmonyLogsResponseError')
-      throw new HarmonyResponseError(results[1]?.data?.error?.message)
+      throw new HarmonyResponseError(txnLogs?.data?.error?.message)
     }
   }
 
@@ -133,31 +169,6 @@ export default class Block {
     return Array.from(new Set(newAddresses)) // De-dupe and return
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private static parseInternal(txn: any): HarmonyInternalTransaction {
-    const gas = parseInt(txn.result.gasUsed, 10)
-    const gasPrice = parseInt(txn.action.gas, 10)
-    const totalGas = ((gasPrice * gas)/10**18).toString()
-    const value = txn.action.value ? parseInt(txn.action.value, 10): 0
-    const parsedValue = Block.parseValue(value)
-
-    return {
-      index: txn.transactionPosition,
-      blockNumber: txn.blockNumber,
-      from: txn.action.from,
-      to: txn.action.to,
-      totalGas,
-      gasPrice,
-      gas,
-      input: txn.action.input,
-      output: txn.action.output,
-      value,
-      parsedValue,
-      transactionHash: txn.transactionHash,
-      time: Date.now()
-    }
-  }
-
   private static createTopLevelFromInternal(txn: HarmonyInternalTransaction): HarmonyTransaction {
     return {
       functionName: txn.event,
@@ -185,13 +196,20 @@ export default class Block {
     const results = await Promise.all([
       getBlockByNum(this.blockNum),
       getLogs(this.blockHex),
-      getInternals(this.blockHex)
+      Block.getInternals(this.blockNum)
     ])
 
-    await Block.validateResults(results)
+    await Block.validateResults(results[0], results[1])
     this.txns = results[0].data.result.transactions
     this.txnLogs = results[1].data.result
-    this.internalTxns = results[2].data.result
+    this.internalTxns = results[2] //eslint-disable-line prefer-destructuring
+  }
+
+  private static async getInternals(blockNum: number): Promise<HarmonyInternalTransaction[]> {
+    const result = await redis.getAsync(`internal-${blockNum}`)
+    if (result === null) return [];
+
+    return JSON.parse(result);
   }
 
   private async combine(): Promise<void> {
@@ -258,22 +276,11 @@ export default class Block {
     return (txn.value === internalTxn.value) && (txn.from === internalTxn.from) && (txn.to === internalTxn.to)
   }
 
-  private async internalsPresent(): Promise<boolean> {
-    if (this.internalTxns != null && this.internalTxns[0]?.transactionHash != null) return true;
-    await logHarmonyError('NoHarmonyInternals')
-    return false;
-  }
-
   private async processInternals(): Promise<void> {
-    const internalsPresent = await this.internalsPresent()
-    if (!internalsPresent) return;
+    if (this.internalTxns.length === 0) return;
 
-    for (const rawTxn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
-      const txn = Block.parseInternal(rawTxn)
-      if (txn.parsedValue === '0') continue;
-
-      const functionName = await getSignature(txn.input.slice(0,10)) || 'Internal' // eslint-disable-line no-await-in-loop
-      txn.event = functionName
+    for (const txn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
+      txn.event = await getSignature(txn.input.slice(0,10)) || 'Internal' // eslint-disable-line no-await-in-loop
 
       if (this.hasMatchingToplevel(txn)) {
         this.addInternalToTxns(txn)

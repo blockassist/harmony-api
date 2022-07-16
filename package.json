@@ -28,7 +28,9 @@
   },
   "scripts": {
     "start": "pm2-runtime start ecosystem.config.js --deep-monitoring",
+    "start:internals": "pm2-runtime start internals.config.js --deep-monitoring",
     "start:dev": "NODE_ENV=development nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/main.ts",
+    "start:dev:internals": "NODE_ENV=development nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/internal.ts",
     "preinstall": "if [ $CIRCLECI=\"1\" ]; then echo 1; else echo npm install pm2 -g; fi",
     "clean": "rimraf coverage build tmp",
     "build": "tsc -p tsconfig.release.json",

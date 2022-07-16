@@ -10,6 +10,8 @@ let redis;
 export default async function (): Promise<void> {
   try {
     const currentBlockNumber = await getNextBlockNumber()
+    redisClient().setAsync('currentBlockNum', currentBlockNumber.toString())
+
     if (await shouldWait(currentBlockNumber)) return;
 
     await processBlock(currentBlockNumber)
@@ -26,7 +28,7 @@ async function shouldWait(currentBlockNumber): Promise<boolean> {
   if (nextBlock === null) return true;
 
   const distance = nextBlock - currentBlockNumber
-  if (distance >= 5) return false;
+  if (distance >= 15) return false;
 
   return true
 }

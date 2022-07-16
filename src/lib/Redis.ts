@@ -44,6 +44,11 @@ export default class Redis {
     await this.setExAsync(key, jsonString, exp)
   };
 
+  async getKeys(keys: string): Promise<string[] | null> {
+    const client = await this.redisClient()
+    return client.keys(keys)
+  }
+
   private async redisClient(): Promise<any> {
     if (this.client) return this.client;
     this.client = createClient({ url: Redis.redisUrl() })
