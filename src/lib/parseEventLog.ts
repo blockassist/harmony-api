@@ -13,8 +13,7 @@ export default async function (log: HarmonyLog): Promise<EventLog|null> {
       if (abi === null) return null;
       const result = parseLog(log, abi.abi);
       return result;
-    } catch(e) {
-      console.log(e)
+    } catch {
       return null
     }
   }
