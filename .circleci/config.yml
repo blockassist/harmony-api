@@ -23,6 +23,7 @@ jobs:
       - checkout
       - heroku/deploy-via-git:
           app-name: blockassist-harmony-<< parameters.env >>
+          force: true
 
 workflows:
   test_app:

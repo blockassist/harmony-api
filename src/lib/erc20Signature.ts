@@ -4,7 +4,6 @@ import Redis from './Redis'
 import SignatureReponse from '../interfaces/SignatureResponse'
 
 let redis;
-const sigExpTime = 86400
 const NullSigVal = 'NULL SIG'
 
 export default async function getSignature(hex: string): Promise<string | null> {
@@ -25,7 +24,13 @@ async function cacheSig(hex: string, signature: string|null): Promise<void> {
   const key = redisKey(hex)
   const sigData = (signature || NullSigVal)
 
-  await redisClient().setExAsync(key, sigData, sigExpTime)
+  await redisClient().setExAsync(key, sigData, sigExpTime())
+}
+
+function sigExpTime(): number {
+  const min = 80000
+  const max = 86400
+  return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
 async function requestSig(hex: string): Promise<string | null> {

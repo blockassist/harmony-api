@@ -1,11 +1,9 @@
-import parseLog  from 'eth-log-parser'
 import converter from 'bech32-converting'
+import parseEventLog  from '../parseEventLog'
 import { HarmonyInternalTransaction, HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary } from '../../interfaces/harmony/Block'
-import EventLog from '../../interfaces/harmony/EventLog'
 import { getBlockByNum, getLogs } from './client'
 import { NullTransactionsError, WaitForBlockError, HarmonyResponseError } from './HarmonyErrors'
 import { getContract, topicToAddress } from './web3Client'
-import erc20Abi from '../erc20Abi'
 import getSignature from '../erc20Signature'
 import { logHarmonyError } from '../firestore'
 import captureException from '../captureException'
@@ -23,7 +21,7 @@ export default class Block {
   public async getTransactions(): Promise<HarmonyTransactionDict> {
     await this.gatherTransactions()
     await this.combine()
-    this.processInternals()
+    await this.processInternals()
 
     return this.transactions
   }
@@ -36,7 +34,7 @@ export default class Block {
       const gas = parseInt(txn.result.gasUsed, 10)
       const gasPrice = parseInt(txn.action.gas, 10)
       const totalGas = ((gasPrice * gas)/10**18).toString()
-      const value = txn.action.value ? parseInt(txn.action.value, 10): 0
+      const value = txn.action.value ? parseInt(txn.action.value, 16): 0
       const parsedValue = Block.parseValue(value)
 
       return {
@@ -52,7 +50,8 @@ export default class Block {
         value,
         parsedValue,
         transactionHash: txn.transactionHash,
-        time: Date.now()
+        time: Date.now(),
+        asset: 'ONE'
       }
     } catch(e) {
       captureException(e)
@@ -67,14 +66,6 @@ export default class Block {
       if (address !== null) addresses.push(address.toLowerCase());
     })
     return addresses
-  }
-
-  private static getEventLog(log: HarmonyLog): EventLog|null {
-    try {
-      return parseLog(log, erc20Abi);
-    } catch {
-      return null
-    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,6 +102,13 @@ export default class Block {
   }
 
   private static parseLogValue(log: HarmonyLog): string {
+    // Note: for wad/ray see: https://ethereum.stackexchange.com/a/87690
+    const wad = log.eventLog?.returnValues?.wad
+    if (wad != null && typeof(wad) === 'string' && wad !== '') return (parseInt(wad, 10)/10**18).toString();
+
+    const ray = log.eventLog?.returnValues?.ray
+    if (ray != null && typeof(ray) === 'string' && ray !== '') return (parseInt(ray, 10)/10**27).toString();
+
     const decimals = Block.getLogDecimals(log)
     if (decimals === null) return '0';
 
@@ -221,7 +219,7 @@ export default class Block {
       this.ethToHash[txn.ethHash] = txn.hash // map the ethHash to the TxnHash
       const [to, from] = Block.convertHarmonyAddresses(txn)
       const parsedValue = Block.parseValue(txn.value)
-      const functionName = await getSignature(txn.input.slice(0,10)) // eslint-disable-line no-await-in-loop
+      const functionName = await Block.getFunctionName(txn.input) // eslint-disable-line no-await-in-loop
       const totalGas = ((txn.gasPrice * txn.gas)/10**18).toString()
       // Set basic values on transaction and initialize arrays
       Object.assign(this.transactions[txn.hash], {
@@ -245,14 +243,21 @@ export default class Block {
       if (this.transactions[txnHash] === null) continue;
       if (this.transactions[txnHash] === undefined) continue;
 
-      // Convert log into human readable event data(if possible)
-      txnLog.eventLog = Block.getEventLog(txnLog)
+      // Convert log into human readable event data, if possible
+      txnLog.eventLog = await parseEventLog(txnLog) // eslint-disable-line no-await-in-loop
       if (txnLog.eventLog === null) continue;
 
       // Get info on contract if exists (token name, decimals...etc)
       txnLog.contract = await getContract(txnLog.address) // eslint-disable-line no-await-in-loop
+
       // Summarize Log Data
       txnLog.summary = Block.summarizeLog(txnLog)
+
+      // Update External Txn Value if Withdrawal
+      if (txnLog?.summary?.event === 'Withdrawal' &&
+          this.transactions[txnHash]?.parsedValue === '0') {
+          this.transactions[txnHash].parsedValue = txnLog.summary.value
+      }
 
       // Add log to Transaction
       this.transactions[txnHash].logs.push(txnLog)
@@ -270,17 +275,34 @@ export default class Block {
     const matchingHash = this.ethToHash[internalTxn.transactionHash]
     if (matchingHash === undefined) return false;
 
+    return this.transactions[matchingHash] === undefined
+  }
+
+  private isDuplicateToplevel(internalTxn: HarmonyInternalTransaction): boolean {
+    const matchingHash = this.ethToHash[internalTxn.transactionHash]
+    if (matchingHash === undefined) return false;
+
     const txn = this.transactions[matchingHash]
     if (txn === undefined) return false;
 
     return (txn.value === internalTxn.value) && (txn.from === internalTxn.from) && (txn.to === internalTxn.to)
   }
 
+  private static async getFunctionName(input: string|null|undefined): Promise<string|null> {
+    if (!input) return null;
+
+    const contractAddress = input.slice(0,10)
+    return getSignature(contractAddress)
+  }
+
   private async processInternals(): Promise<void> {
     if (this.internalTxns.length === 0) return;
 
     for (const txn of this.internalTxns) { // eslint-disable-line no-restricted-syntax
-      txn.event = await getSignature(txn.input.slice(0,10)) || 'Internal' // eslint-disable-line no-await-in-loop
+      if (this.isDuplicateToplevel(txn)) continue;
+
+      txn.event = await Block.getFunctionName(txn?.input) || 'Internal' // eslint-disable-line no-await-in-loop
+
 
       if (this.hasMatchingToplevel(txn)) {
         this.addInternalToTxns(txn)

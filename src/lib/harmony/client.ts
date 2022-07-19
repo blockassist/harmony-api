@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from 'axios';
 import { DefaultParams } from '../../interfaces/harmony/Client';
+import Abi from '../../interfaces/Abi';
 import { logHarmonyError } from '../firestore';
 import captureException from '../captureException'
 
@@ -12,6 +13,16 @@ async function nextBlockNum(): Promise<number|null> {
   } catch(e) {
     captureException(e)
     await logHarmonyError('GetNextBlockNumAxiosException')
+    return null
+  }
+}
+
+async function requestAbi(contract: string): Promise<Abi|null> {
+  try {
+    const url = `https://ctrver.t.hmny.io/fetchContractCode?contractAddress=${contract}`
+    const response = await axios.get<Abi>(url)
+    return response.data
+  } catch(e) {
     return null
   }
 }
@@ -68,4 +79,4 @@ function defaultParams(method: string, params: any[]): DefaultParams {
   }
 }
 
-export { getBlockByNum, getLogs, getInternals, nextBlockNum }
+export { getBlockByNum, getLogs, getInternals, nextBlockNum, requestAbi }

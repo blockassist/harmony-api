@@ -66,7 +66,8 @@ interface HarmonyInternalTransaction {
   value: number;
   parsedValue: string;
   transactionHash: string;
-  event?: string;
+  asset: string;
+  event?: string|null
   time: number | string | null;
 }
 
