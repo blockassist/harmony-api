@@ -16,6 +16,7 @@ export default async function (): Promise<void> {
 
     await processBlock(currentBlockNumber)
     await updateLastBlockNumber(currentBlockNumber)
+    await redisClient().del(`internal-currentBlockNumber`)
     console.log(`Successfully processed Block: ${currentBlockNumber}`)
   } catch(e) {
     if (e instanceof WaitForBlockError) return;

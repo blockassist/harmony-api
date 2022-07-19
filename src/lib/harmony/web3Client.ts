@@ -3,11 +3,10 @@ import Contract from '../../interfaces/harmony/Contract'
 import Redis from '../Redis';
 import captureException from '../captureException'
 import erc20Abi from '../erc20Abi'
+import getAbi from '../getAbi'
 
 let w3Client;
 let redis;
-const BadContractExpTime = 86400
-const ContractExpTime = 172800
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function web3Client(): any {
@@ -32,12 +31,12 @@ function topicToAddress(val: string): string | null {
 
 async function getContract(address: string): Promise<Contract|null> {
   try {
-    // If we already know contract data isn't parseable, return null
-    if (await isBadContract(address)) return null;
-
     // If contract exists in cache return it
     const cachedContract = await getContractFromCache(address);
     if (cachedContract !== null) return cachedContract;
+
+    // If we already know contract data isn't parseable, return null
+    if (await isBadContract(address)) return null;
 
     // Lookup contract & return if exists
     const web3 = web3Client()
@@ -45,10 +44,22 @@ async function getContract(address: string): Promise<Contract|null> {
     const contractInfo = await parseContract(contract, address)
     await cacheContract(contractInfo)
     return contractInfo
-  } catch(e) {
-    // Catch error for bad contract, cache and return null
-    await cacheBadContract(address)
-    return null
+  } catch {
+    try {
+      const abi = await getAbi(address)
+      if (abi === null) return null;
+
+      const web3 = web3Client()
+      const contract = new web3.eth.Contract(abi, address)
+      const contractInfo = await parseContract(contract, address)
+
+      await cacheContract(contractInfo)
+      return contractInfo
+    } catch {
+      // Catch error for bad contract, cache and return null
+      await cacheBadContract(address)
+      return null
+    }
   }
 }
 
@@ -68,7 +79,7 @@ function redisClient(): Redis {
 
 async function cacheContract(contract: Contract): Promise<void> {
   const contractKey = `contract-${contract.address}`
-  await redisClient().setExObjectAsync(contractKey, contract, ContractExpTime)
+  await redisClient().setExObjectAsync(contractKey, contract, expTime())
 }
 
 async function isBadContract(address: string): Promise<boolean> {
@@ -79,12 +90,20 @@ async function isBadContract(address: string): Promise<boolean> {
 
 async function cacheBadContract(address: string): Promise<void> {
   const contractKey = `badcontract-${address}`
-  await redisClient().setExAsync(contractKey, '0', BadContractExpTime)
+  await redisClient().setExAsync(contractKey, '0', expTime(true))
 }
 
 async function getContractFromCache(address: string): Promise<Contract|null> {
   const contractKey = `contract-${address}`
   return redisClient().getObjectAsync(contractKey)
 }
+
+function expTime(bad=false): number {
+  const min = (bad ? 80000 : 170000)
+  const max = (bad ? 86400 : 172800)
+
+  return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
 
 export { getContract, topicToAddress }
