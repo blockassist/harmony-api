@@ -275,7 +275,7 @@ export default class Block {
     const matchingHash = this.ethToHash[internalTxn.transactionHash]
     if (matchingHash === undefined) return false;
 
-    return this.transactions[matchingHash] === undefined
+    return this.transactions[matchingHash] !== undefined
   }
 
   private isDuplicateToplevel(internalTxn: HarmonyInternalTransaction): boolean {
