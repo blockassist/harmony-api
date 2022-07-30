@@ -29,7 +29,7 @@ async function shouldWait(currentBlockNumber): Promise<boolean> {
   if (nextBlock === null) return true;
 
   const distance = nextBlock - currentBlockNumber
-  if (distance >= 15) return false;
+  if (distance >= 12) return false;
 
   return true
 }
