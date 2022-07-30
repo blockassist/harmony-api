@@ -1,5 +1,4 @@
 import axios, { AxiosResponse } from 'axios'
-import captureException from './captureException'
 import Redis from './Redis'
 import SignatureReponse from '../interfaces/SignatureResponse'
 
@@ -40,8 +39,7 @@ async function requestSig(hex: string): Promise<string | null> {
     const signature:SignatureReponse = response.data
     if (signature.count > 0) return signature.results[0].text_signature;
     return null
-  } catch(e) {
-    captureException(e)
+  } catch {
     return null
   }
 }
