@@ -253,10 +253,16 @@ export default class Block {
       // Summarize Log Data
       txnLog.summary = Block.summarizeLog(txnLog)
 
-      // Update External Txn Value if Withdrawal
-      if (txnLog?.summary?.event === 'Withdrawal' &&
-          this.transactions[txnHash]?.parsedValue === '0') {
-          this.transactions[txnHash].parsedValue = txnLog.summary.value
+      // TODO: Wrap event specific logic into their own objects
+
+      // For withdrawl, set TO to the contract address otherwise it looks like a self-send
+      if (txnLog?.summary?.event === 'Withdrawal') {
+        txnLog.summary.to = txnLog.address
+      }
+
+      // For deposit, set FROM to the contract address otherwise it looks like a self-send
+      if (txnLog?.summary?.event === 'Deposit') {
+        txnLog.summary.from = txnLog.address
       }
 
       // Add log to Transaction
