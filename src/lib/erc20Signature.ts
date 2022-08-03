@@ -45,6 +45,7 @@ async function requestSig(hex: string): Promise<string | null> {
     if (signature.count > 0) return signature.results[0].text_signature;
     return null
   } catch {
+    console.log('SigatureDbFailure')
     return null
   }
 }
