@@ -210,6 +210,19 @@ export default class Block {
     return JSON.parse(result);
   }
 
+  private getTxnHashFromLogHash(logHash: string): string | null {
+    // If there's a match external transaction for the provided hash, return it
+    if (this.transactions[logHash] != null) return logHash;
+
+    // See if we were passed an ETH hash, if not return null
+    const txnHash = this.ethToHash[logHash]
+    if (txnHash == null) return null;
+
+    // Check for a matching external transaction and if so return that hash
+    if (this.transactions[txnHash] != null) return txnHash;
+    return null
+  }
+
   private async combine(): Promise<void> {
     this.transactions = {}
     for (const txn of this.txns) {  // eslint-disable-line no-restricted-syntax
@@ -236,23 +249,10 @@ export default class Block {
       });
     }
 
-    function getTxnHashFromLogHash(logHash: string): string | null {
-      // If there's a match external transaction for the provided hash, return it
-      if (this.transactions[logHash] != null) return logHash;
-
-      // See if we were passed an ETH hash, if not return null
-      const txnHash = this.ethToHash[logHash]
-      if (txnHash == null) return null;
-
-      // Check for a matching external transaction and if so return that hash
-      if (this.transactions[txnHash] != null) return txnHash;
-      return null
-    }
-
     // Process logs and add them to main transaction object
     for (const txnLog of this.txnLogs) { // eslint-disable-line no-restricted-syntax
       // Find the correct hash for the log, if it doesn't exist, continue to next iteration
-      const txnHash = getTxnHashFromLogHash(txnLog.transactionHash)
+      const txnHash = this.getTxnHashFromLogHash(txnLog.transactionHash)
       if (txnHash == null) continue;
 
       // Convert log into human readable event data, if possible
