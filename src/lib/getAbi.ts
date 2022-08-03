@@ -60,8 +60,8 @@ function redisClient(): Redis {
 
 function expTime(absent=false): number {
   // Variable redis expiration times to prevent everything from expiring at the same time
-  const min = (absent ? 80000 : 170000)
-  const max = (absent ? 86400 : 172800)
+  const min = (absent ? 1740 : 777600) // absent = 29min, valid = 9-days
+  const max = (absent ? 1800 : 864000) // absent = 30min, valid = 10-days
 
   return Math.floor(Math.random() * (max - min + 1) + min)
 }
