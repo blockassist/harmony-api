@@ -295,7 +295,7 @@ export default class Block {
   }
 
   private static async getFunctionName(input: string|null|undefined): Promise<string|null> {
-    if (!input) return null;
+    if (!input || input === '0x') return null;
 
     const contractAddress = input.slice(0,10)
     return getSignature(contractAddress)
