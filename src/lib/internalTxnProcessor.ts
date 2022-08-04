@@ -11,6 +11,7 @@ const EXPIRE = 7200 // 2-hours
 export default async function call(): Promise<void> {
   const blockNums = await blocksToProcess()
   if (blockNums.length === 0) return;
+  console.log(`Processing Internals for Blocks ${blockNums}`)
   
   const promises = blockNums.map((blockNum) => {
     const blockHex = `0x${blockNum.toString(16)}`
@@ -21,6 +22,7 @@ export default async function call(): Promise<void> {
   })
 
   await Promise.all(promises)
+  console.log(`Finished processing internals for Blocks ${blockNums}`)
 }
 
 async function blocksToProcess(): Promise<number[]> {
@@ -32,9 +34,6 @@ async function blocksToProcess(): Promise<number[]> {
   try {
     const currentBlockNumber = await getCurrentBlockNum()
     const nextBlock = await nextBlockNum()
-
-    console.log(`Current Block Number: ${currentBlockNumber}`)
-    console.log(`Newest Block Number: ${nextBlock}`)
 
     if (!currentBlockNumber || !nextBlock) return [];
 
