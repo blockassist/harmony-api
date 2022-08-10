@@ -2,7 +2,7 @@
 /* eslint-disable no-await-in-loop */
 
 import dotenv from 'dotenv'
-import runInternals from './lib/internalTxnProcessor'
+import runInternals from './lib/Block/internalTxnProcessor'
 import captureException from './lib/captureException'
 
 if (process.env.NODE_ENV === 'development') dotenv.config({ path: './.env.local' });

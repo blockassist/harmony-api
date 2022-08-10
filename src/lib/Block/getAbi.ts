@@ -1,6 +1,6 @@
-import Abi from '../interfaces/Abi'
-import { requestAbi } from './harmony/client'
-import Redis from './Redis'
+import Abi from '../../interfaces/Abi'
+import { requestAbi } from '../Harmony/client'
+import Redis from '../Redis'
 
 let redis;
 

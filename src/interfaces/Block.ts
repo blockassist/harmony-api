@@ -9,7 +9,7 @@ interface LogSummary {
   to: string | unknown;
 }
 
-interface HarmonyLog {
+interface Log {
   address: string;
   topics: string[];
   data: string;
@@ -24,7 +24,7 @@ interface HarmonyLog {
   summary?: LogSummary;
 }
 
-interface HarmonyTransaction {
+interface Transaction {
   functionName?: string | null;
   blockHash?: string;
   blockNumber: number;
@@ -46,14 +46,14 @@ interface HarmonyTransaction {
   v?: string;
   r?: string;
   s?: string;
-  logs: HarmonyLog[];
-  internals?: HarmonyInternalTransaction[]
+  logs: Log[];
+  internals?: InternalTransaction[]
   addresses?: string[];
   asset: string;
   sortField?: number;
 }
 
-interface HarmonyInternalTransaction {
+interface InternalTransaction {
   index: number;
   blockNumber: number;
   from: string;
@@ -71,8 +71,8 @@ interface HarmonyInternalTransaction {
   time: number | string | null;
 }
 
-interface HarmonyTransactionDict {
-  [key : string]: HarmonyTransaction;
+interface TransactionDict {
+  [key : string]: Transaction;
 }
 
-export { HarmonyTransaction, HarmonyLog, HarmonyTransactionDict, LogSummary, HarmonyInternalTransaction }
+export { Transaction, Log, TransactionDict, LogSummary, InternalTransaction }

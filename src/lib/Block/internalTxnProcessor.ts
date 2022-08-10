@@ -1,9 +1,9 @@
-import { nextBlockNum, getInternals } from './harmony/client'
-import { HarmonyInternalTransaction } from '../interfaces/harmony/Block'
-import captureException from './captureException'
-import Redis from './Redis'
-import Block from './harmony/Block'
-import wait from './wait'
+import wait from '../wait'
+import { nextBlockNum, getInternals } from '../Harmony/client'
+import { InternalTransaction } from '../../interfaces/Block'
+import captureException from '../captureException'
+import Redis from '../Redis'
+import parseInternal from './InternalTxnParser'
 
 let redis;
 const MAX_CALLS = 10 // Total number of blocks to request internal txns for at a time
@@ -69,7 +69,7 @@ async function processInternalTxns(response: any, blockNum: number): Promise<voi
 
   const internalTxns = []
   response.data.result.forEach((i) => {
-    const txn = Block.parseInternal(i)
+    const txn = parseInternal(i)
     if (txn !== null && txn.parsedValue !== '0') internalTxns.push(txn);
   })
 
@@ -78,7 +78,7 @@ async function processInternalTxns(response: any, blockNum: number): Promise<voi
   return cacheInternalTxns(internalTxns, blockNum)
 }
 
-function cacheInternalTxns(txns: HarmonyInternalTransaction[], blockNum: number): void {
+function cacheInternalTxns(txns: InternalTransaction[], blockNum: number): void {
   const json = JSON.stringify(txns)
   redisClient().setExAsync(`internal-${blockNum}`, json, EXPIRE)
 }

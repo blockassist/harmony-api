@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from 'axios'
-import Redis from './Redis'
-import SignatureReponse from '../interfaces/SignatureResponse'
+import Redis from '../Redis'
+import SignatureReponse from '../../interfaces/SignatureResponse'
 
 let redis;
 const NullSigVal = 'NULL SIG'
