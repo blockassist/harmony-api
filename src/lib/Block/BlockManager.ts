@@ -1,12 +1,13 @@
 import BlockProcessor from './BlockProcessor'
 import { getlastBlockNumber, setLastBlockNumber } from '../BlockNumber'
-import { nextBlockNum } from './client'
-import { WaitForBlockError } from './HarmonyErrors'
+import { nextBlockNum } from '../Harmony/client'
+import { WaitForBlockError } from '../Harmony/HarmonyErrors'
 import captureException from '../captureException'
 import wait from '../wait'
 import Redis from '../Redis'
 
 let redis;
+const BLOCK_DISTANCE = 12
 
 export default async function (): Promise<void> {
   try {
@@ -33,7 +34,7 @@ async function shouldWait(currentBlockNumber): Promise<boolean> {
   if (nextBlock === null) return true;
 
   const distance = nextBlock - currentBlockNumber
-  if (distance >= 12) return false;
+  if (distance >= BLOCK_DISTANCE) return false;
 
   return true
 }

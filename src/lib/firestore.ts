@@ -1,6 +1,6 @@
 import admin from 'firebase-admin'
 import { Firestore } from 'firebase-admin/firestore'
-import { HarmonyTransaction } from '../interfaces/harmony/Block'
+import { Transaction } from '../interfaces/Block'
 import captureException from './captureException'
 
 let firestoreClient:Firestore | null = null;
@@ -63,7 +63,7 @@ async function logHarmonyError(errorType: string): Promise<void> {
   }
 }
 
-async function batchCreateTransactions(transactions: HarmonyTransaction[]): Promise<boolean> {
+async function batchCreateTransactions(transactions: Transaction[]): Promise<boolean> {
   try {
     const batch = client().batch();
     const collectionName = `transactions-${process.env.ENV_NAME}`

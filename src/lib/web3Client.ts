@@ -1,8 +1,8 @@
 import Web3 from 'web3'
-import Contract from '../../interfaces/harmony/Contract'
-import Redis from '../Redis';
-import erc20Abi from '../erc20Abi'
-import getAbi from '../getAbi'
+import Contract from '../interfaces/Contract'
+import Redis from './Redis';
+import erc20Abi from './Block/erc20Abi'
+import getAbi from './Block/getAbi'
 
 let w3Client;
 let redis;

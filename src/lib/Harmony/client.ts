@@ -1,8 +1,10 @@
 import axios, { AxiosResponse } from 'axios';
 import { DefaultParams } from '../../interfaces/harmony/Client';
+import { InternalTransaction } from '../../interfaces/Block'
 import Abi from '../../interfaces/Abi';
 import { logHarmonyError } from '../firestore';
 import captureException from '../captureException'
+import Redis from '../Redis'
 
 const harmonyUrl = 'https://rpc.s0.t.hmny.io'
 const traceblockUrl = 'https://a.api.s0.t.hmny.io'
@@ -28,7 +30,7 @@ async function requestAbi(contract: string): Promise<Abi|null> {
   }
 }
 
-async function getBlockByNum(blockNum: number): Promise<AxiosResponse|null> {
+async function getExternals(blockNum: number): Promise<AxiosResponse|null> {
   try {
     const method = 'hmyv2_getBlockByNumber'
     const methodParams = [blockNum, { "fullTx": true, "inclTx": true, "InclStaking": false }]
@@ -70,6 +72,14 @@ async function getInternals(blockHex: string): Promise<AxiosResponse|null> {
   }
 }
 
+async function getCachedInternals(blockNum: number): Promise<InternalTransaction[]> {
+  const redis = new Redis();
+  const result = await redis.getAsync(`internal-${blockNum}`)
+  if (result === null) return [];
+
+  return JSON.parse(result);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function defaultParams(method: string, params: any[]): DefaultParams {
   return {
@@ -80,4 +90,4 @@ function defaultParams(method: string, params: any[]): DefaultParams {
   }
 }
 
-export { getBlockByNum, getLogs, getInternals, nextBlockNum, requestAbi }
+export { getExternals, getLogs, getInternals, nextBlockNum, requestAbi, getCachedInternals }

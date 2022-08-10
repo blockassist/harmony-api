@@ -2,7 +2,7 @@
 /* eslint-disable no-await-in-loop */
 
 import dotenv from 'dotenv'
-import BlockManager from './lib/harmony/BlockManager'
+import BlockManager from './lib/Block/BlockManager'
 import captureException from './lib/captureException'
 
 if (process.env.NODE_ENV === 'development') dotenv.config({ path: './.env.local' });

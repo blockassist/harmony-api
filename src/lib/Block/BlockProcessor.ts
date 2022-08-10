@@ -1,6 +1,6 @@
-import { HarmonyTransactionDict, HarmonyTransaction } from '../../interfaces/harmony/Block'
+import { TransactionDict, Transaction } from '../../interfaces/Block'
 import { getSubscribedAddresses, batchCreateTransactions } from '../firestore'
-import Block from './Block'
+import TransactionAssembler from './TransactionAssembler'
 import Redis from '../Redis'
 
 const redis = new Redis();
@@ -18,8 +18,8 @@ export default class BlockProcessor {
   }
 
   private async getAllTransactions(): Promise<void> {
-    const block = new Block(this.blockNum)
-    this.transactions = await block.getTransactions()
+    const assembler = new TransactionAssembler(this.blockNum, 'Harmony')
+    this.transactions = await assembler.assembleTransactions()
   }
 
   private async findRelevantTransactions(): Promise<void> {
@@ -53,9 +53,9 @@ export default class BlockProcessor {
     throw new Error('Could not successfully upload matches')
   }
 
-  transactions: HarmonyTransactionDict
+  transactions: TransactionDict
 
-  relevantTransactions: HarmonyTransaction[]
+  relevantTransactions: Transaction[]
 
   blockNum: number
 }
