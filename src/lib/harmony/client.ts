@@ -4,7 +4,7 @@ import Abi from '../../interfaces/Abi';
 import { logHarmonyError } from '../firestore';
 import captureException from '../captureException'
 
-const harmonyUrl = 'https://a.api.s0.t.hmny.io'
+const harmonyUrl = 'https://rpc.s0.t.hmny.io'
 
 async function nextBlockNum(): Promise<number|null> {
   try {
