@@ -5,6 +5,7 @@ import { logHarmonyError } from '../firestore';
 import captureException from '../captureException'
 
 const harmonyUrl = 'https://rpc.s0.t.hmny.io'
+const traceblockUrl = 'https://a.api.s0.t.hmny.io'
 
 async function nextBlockNum(): Promise<number|null> {
   try {
@@ -60,7 +61,7 @@ async function getInternals(blockHex: string): Promise<AxiosResponse|null> {
     const method = 'trace_block'
     const methodParams = [blockHex]
 
-    const response = await axios.post(harmonyUrl, defaultParams(method, methodParams))
+    const response = await axios.post(traceblockUrl, defaultParams(method, methodParams))
     return response
   } catch(e) {
     captureException(e)
