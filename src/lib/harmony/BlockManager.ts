@@ -3,6 +3,7 @@ import { getlastBlockNumber, updateLastBlockNumber } from '../firestore'
 import { nextBlockNum } from './client'
 import { WaitForBlockError } from './HarmonyErrors'
 import captureException from '../captureException'
+import wait from '../wait'
 import Redis from '../Redis'
 
 let redis;
@@ -12,7 +13,10 @@ export default async function (): Promise<void> {
     const currentBlockNumber = await getNextBlockNumber()
     redisClient().setAsync('currentBlockNum', currentBlockNumber.toString())
 
-    if (await shouldWait(currentBlockNumber)) return;
+    if (await shouldWait(currentBlockNumber)) {
+      await wait(2)
+      return
+    }
 
     await processBlock(currentBlockNumber)
     await updateLastBlockNumber(currentBlockNumber)

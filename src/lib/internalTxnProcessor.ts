@@ -3,6 +3,7 @@ import { HarmonyInternalTransaction } from '../interfaces/harmony/Block'
 import captureException from './captureException'
 import Redis from './Redis'
 import Block from './harmony/Block'
+import wait from './wait'
 
 let redis;
 const MAX_CALLS = 10 // Total number of blocks to request internal txns for at a time
@@ -10,7 +11,10 @@ const EXPIRE = 7200 // 2-hours
 
 export default async function call(): Promise<void> {
   const blockNums = await blocksToProcess()
-  if (blockNums.length === 0) return;
+  if (blockNums.length === 0) {
+    await wait(2)
+    return
+  }
   console.log(`Processing Internals for Blocks ${blockNums}`)
   
   const promises = blockNums.map((blockNum) => {
