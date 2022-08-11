@@ -62,7 +62,11 @@ async function getCurrentBlockNum(): Promise<number|null> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function processInternalTxns(response: any, blockNum: number): Promise<void|null> {
-  if (response === null) return null;
+  if (response?.data?.result == null) {
+    await wait(2)
+    return null
+  }
+
   const internalTxns = []
   response.data.result.forEach((i) => {
     const txn = Block.parseInternal(i)
