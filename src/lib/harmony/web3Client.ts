@@ -1,7 +1,6 @@
 import Web3 from 'web3'
 import Contract from '../../interfaces/harmony/Contract'
 import Redis from '../Redis';
-import captureException from '../captureException'
 import erc20Abi from '../erc20Abi'
 import getAbi from '../getAbi'
 
@@ -23,8 +22,7 @@ function topicToAddress(val: string): string | null {
   try {
     const web3 = web3Client()
     return web3.eth.abi.decodeParameter('address', val)
-  } catch(e) {
-    captureException(e)
+  } catch {
     return null
   }
 }
