@@ -35,12 +35,14 @@ export default class BlockProcessor {
   private static async getAddresses(): Promise<string[]> {
     const key = 'subscribed-addresses'
     const result = await redis.getAsync(key)
+    if (result != null) console.log('Addresses returned from Redis');
     if (result != null) return JSON.parse(result);
 
     const subscribedAddresses = await getSubscribedAddresses()
     const json = JSON.stringify(subscribedAddresses)
     redis.setExAsync(key, json, 30)
 
+    console.log('Addresses returned from Firebase')
     return subscribedAddresses
   }
 
