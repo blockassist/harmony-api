@@ -1,5 +1,5 @@
 import BlockProcessor from './BlockProcessor'
-import { getlastBlockNumber, updateLastBlockNumber } from '../firestore'
+import { getlastBlockNumber, setLastBlockNumber } from '../BlockNumber'
 import { nextBlockNum } from './client'
 import { WaitForBlockError } from './HarmonyErrors'
 import captureException from '../captureException'
@@ -19,7 +19,7 @@ export default async function (): Promise<void> {
     }
 
     await processBlock(currentBlockNumber)
-    await updateLastBlockNumber(currentBlockNumber)
+    await setLastBlockNumber(currentBlockNumber)
     await redisClient().del(`internal-currentBlockNumber`)
     console.log(`Successfully processed Block: ${currentBlockNumber}`)
   } catch(e) {
@@ -45,7 +45,7 @@ async function processBlock(blockNumber: number): Promise<void> {
 
 async function getNextBlockNumber(): Promise<number> {
   const result = await getlastBlockNumber()
-  if (result === null) throw new Error('LastBlockNumber from Firebase is null');
+  if (result === null) throw new Error('last-block-num from Redis is null');
 
   return (result + 1)
 }
