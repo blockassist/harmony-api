@@ -1,6 +1,9 @@
 import { HarmonyTransactionDict, HarmonyTransaction } from '../../interfaces/harmony/Block'
 import { getSubscribedAddresses, batchCreateTransactions } from '../firestore'
 import Block from './Block'
+import Redis from '../Redis'
+
+const redis = new Redis();
 
 export default class BlockProcessor {
   constructor(blockNum: number) {
@@ -20,13 +23,25 @@ export default class BlockProcessor {
   }
 
   private async findRelevantTransactions(): Promise<void> {
-    const subscribedAddresses = await getSubscribedAddresses()
+    const subscribedAddresses = await BlockProcessor.getAddresses()
     const keys = Object.keys(this.transactions)
     keys.forEach((key) => {
       const txn = this.transactions[key]
       const match = txn.addresses.find((addy) => !!subscribedAddresses.includes(addy))
       if (match) this.relevantTransactions.push(txn);
     })
+  }
+
+  private static async getAddresses(): Promise<string[]> {
+    const key = 'subscribed-addresses'
+    const result = await redis.getAsync(key)
+    if (result != null) return JSON.parse(result);
+
+    const subscribedAddresses = await getSubscribedAddresses()
+    const json = JSON.stringify(subscribedAddresses)
+    redis.setExAsync(key, json, 30)
+
+    return subscribedAddresses
   }
 
   private async uploadMatches(): Promise<void> {
