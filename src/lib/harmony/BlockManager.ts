@@ -44,8 +44,13 @@ async function processBlock(blockNumber: number): Promise<void> {
 }
 
 async function getNextBlockNumber(): Promise<number> {
-  const result = await getlastBlockNumber()
-  if (result === null) throw new Error('last-block-num from Redis is null');
+  let result = await getlastBlockNumber()
+  if (result === null) {
+    result = await nextBlockNum()
+    if (result === null) throw new Error('last-block-num from Redis is null');
+    await setLastBlockNumber(result)
+    console.log('BlockNum did not exists from redis, starting from newest block')
+  }
 
   return (result + 1)
 }
