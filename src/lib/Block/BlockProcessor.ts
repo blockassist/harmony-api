@@ -3,7 +3,7 @@ import { getSubscribedAddresses, batchCreateTransactions } from '../firestore'
 import TransactionAssembler from './TransactionAssembler'
 import Redis from '../Redis'
 
-const redis = new Redis();
+let redis;
 
 export default class BlockProcessor {
   constructor(blockNum: number) {
@@ -34,7 +34,7 @@ export default class BlockProcessor {
 
   private static async getAddresses(): Promise<string[]> {
     const key = 'subscribed-addresses'
-    const result = await redis.getAsync(key)
+    const result = await BlockProcessor.redisClient().getAsync(key)
     if (result != null) console.log('Addresses returned from Redis');
     if (result != null) return JSON.parse(result);
 
@@ -51,6 +51,12 @@ export default class BlockProcessor {
     const success = await batchCreateTransactions(this.relevantTransactions)
     if (success) return;
     throw new Error('Could not successfully upload matches')
+  }
+
+  private static redisClient(): Redis {
+    if (redis) return redis;
+    redis = new Redis()
+    return redis
   }
 
   transactions: TransactionDict

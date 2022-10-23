@@ -6,6 +6,8 @@ import { logHarmonyError } from '../firestore';
 import captureException from '../captureException'
 import Redis from '../Redis'
 
+let redis;
+
 const harmonyUrl = 'https://rpc.s0.t.hmny.io'
 const traceblockUrl = 'https://a.api.s0.t.hmny.io'
 
@@ -73,11 +75,16 @@ async function getInternals(blockHex: string): Promise<AxiosResponse|null> {
 }
 
 async function getCachedInternals(blockNum: number): Promise<InternalTransaction[]> {
-  const redis = new Redis();
-  const result = await redis.getAsync(`internal-${blockNum}`)
+  const result = await redisClient().getAsync(`internal-${blockNum}`)
   if (result === null) return [];
 
   return JSON.parse(result);
+}
+
+function redisClient(): Redis {
+  if (redis) return redis;
+  redis = new Redis()
+  return redis
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
